@@ -33,6 +33,16 @@
 			data.fid = Random.identifier("field");
 			data.reference_value = "";
 			
+			data.bufferChanging = false;
+			data.bufferLoading = false;
+			data.bufferTimeout = null;
+			data.bufferMark = null;
+			data.buffer = this.root[this.field.property];
+//			if(this.field.type === "textarea") {
+//			} else {
+//				data.buffer = "";
+//			}
+			
 			if(this.field.filter) {
 				data.filterKeys = Object.keys(this.field.filter);
 			}
@@ -44,9 +54,12 @@
 		},
 		"mounted": function() {
 			rsSystem.register(this);
-			if(this.field.source_index.listing) {
+			if(this.field.source_index && this.field.source_index.listing) {
 				this.field.source_index.listing.sort(this.sortData);
 			}
+			this.$watch("root." + this.field.property, function(newValue, oldValue) {
+				Vue.set(this, "buffer", newValue);
+			});
 		},
 		"methods": {
 			"isVisible": function() {
@@ -91,6 +104,13 @@
 								return false;
 							}
 							break;
+						case "!":
+							if(this.root[keys[x]]) {
+								return false;
+							}
+							break;
+						case "test":
+							return !!this.root[keys[x]] === this.field.condition[keys[x]].value;
 						case "contains":
 							if(this.field.condition[keys[x]].values) {
 								for(v=0; v<this.field.condition[keys[x]].values.length; v++) {
@@ -149,6 +169,9 @@
 			"openReference": function(reference) {
 				rsSystem.EventBus.$emit("display-info", reference);
 			},
+			"blurring": function() {
+				this.$emit("blur", this.field);
+			},
 			"checkField": function() {
 				if(!this.root[this.field.property]) {
 					return false;
@@ -164,6 +187,29 @@
 					return true;
 				}
 			},
+			"bufferChangeProcess": function() {
+				if(this.bufferMark < Date.now()) {
+					Vue.set(this.root, this.field.property, this.buffer);
+					Vue.set(this, "bufferLoading", false);
+					this.emitChanged();
+				} else {
+					if(!this.bufferChanging) {
+						Vue.set(this, "bufferChanging", true);
+						this.$emit("changing");
+					}
+					setTimeout(() => {
+						this.bufferChangeProcess();
+					}, 500);
+				}
+			},
+			"bufferChanged": function() {
+				Vue.set(this, "bufferMark", Date.now() + 500);
+				Vue.set(this, "bufferLoading", true);
+				setTimeout(() => {
+					this.bufferChangeProcess();
+				}, 500);
+				
+			},
 			"emitChanged": function() {
 				this.$emit("changed", {
 					"value": this.root[this.field.property],
@@ -174,6 +220,8 @@
 				if(this.field.onchange) {
 					this.field.onchange(this.root[this.field.property]);
 				}
+
+				Vue.set(this, "bufferChanging", false);
 			},
 			"set": function(value) {
 				Vue.set(this.root, this.field.property, value);
@@ -197,6 +245,48 @@
 				} else {
 					return {};
 				}
+			},
+			"sortData": function(a, b) {
+				var aName,
+					bName;
+				
+				if(a.order !== undefined && b.order !== undefined && a.order !== null && b.order !== null) {
+					if(a.order < b.order) {
+						return -1;
+					} else if(a.order > b.order) {
+						return 1;
+					}
+				}
+				if((a.order === undefined || a.order === null) && b.order !== undefined && b.order !== null) {
+					return -1;
+				}
+				if((b.order === undefined || b.order === null) && a.order !== undefined && a.order !== null) {
+					return 1;
+				}
+
+				if(a.name !== undefined && b.name !== undefined && a.name !== null && b.name !== null) {
+					aName = a.name.toLowerCase();
+					bName = b.name.toLowerCase();
+					if(aName < bName) {
+						return -1;
+					} else if(aName > bName) {
+						return 1;
+					}
+				}
+				if((a.name === undefined || a.name === null) && b.name !== undefined && b.name !== null) {
+					return -1;
+				}
+				if((b.name === undefined || b.name === null) && a.name !== undefined && a.name !== null) {
+					return 1;
+				}
+
+				if(a.id < b.id) {
+					return -1;
+				} else if(a.id > b.id) {
+					return 1;
+				}
+				
+				return 0;
 			}
 		},
 		"template": Vue.templified("components/field.html")

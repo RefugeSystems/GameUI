@@ -7,16 +7,27 @@
 		itemtypes,
 		profiles,
 		entities,
+		parent,
 		attrs,
 		items,
 		notes,
 		skill,
-		stats;
+		slots,
+		stats,
+		types;
 	
 	itemtypes = {
 		"label": "Item Types",
 		"property": "itemtype",
 		"type": "multireference",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+	
+	parent = {
+		"label": "Parent",
+		"property": "parent", // Not "entity" as modifier inheritence is not wanted
+		"type": "select",
 		"optionValue": "id",
 		"optionLabel": "name"
 	};
@@ -41,6 +52,14 @@
 		"label": "Attunee",
 		"property": "attuned_to",
 		"type": "select",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+	
+	slots = {
+		"label": "Slot Usage",
+		"property": "slot_usage",
+		"type": "multireference",
 		"optionValue": "id",
 		"optionLabel": "name"
 	};
@@ -93,15 +112,21 @@
 		"optionLabel": "name"
 	};
 	
+	types = {
+		"label": "Types",
+		"property": "type",
+		"type": "multireference",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+	
 	dataSource = [{
 		"label": "ID",
 		"property": "id",
 		"type": "text"
-	}, {
-		"label": "Parent",
-		"property": "parent",
-		"type": "text"
-	}, {
+	},
+	parent,
+	{
 		"label": "Name",
 		"property": "name",
 		"type": "text"
@@ -115,9 +140,9 @@
 		"property": "price",
 		"type": "number"
 	}, {
-		"label": "Damage",
-		"property": "damage",
-		"type": "text"
+		"label": "Cumbersome",
+		"property": "Cumbersome",
+		"type": "number"
 	}, {
 		"label": "Encumberance",
 		"property": "encumberance",
@@ -197,6 +222,14 @@
 		"property": "needs_slot",
 		"type": "checkbox"
 	}, {
+		"label": "Ranged",
+		"property": "is_ranged",
+		"type": "checkbox"
+	}, {
+		"label": "Melee",
+		"property": "is_melee",
+		"type": "checkbox"
+	}, {
 		"label": "Template",
 		"property": "template",
 		"type": "checkbox"
@@ -208,9 +241,15 @@
 		"label": "Obscured",
 		"property": "obscured",
 		"type": "checkbox"
+	}, {
+		"label": "Screen",
+		"property": "screen",
+		"type": "checkbox"
 	},
+	slots,
 	cancontain,
 	itemtypes,
+	types,
 	abilities,
 	items,
 	attrs,
@@ -250,12 +289,15 @@
 			skill.options.sortBy("name");
 			entities.options = this.universe.indexes.entity.listing;
 			entities.options.sortBy("name");
+			parent.options = this.universe.indexes.item.listing;
+			parent.options.sortBy("name");
 
 			cancontain.source_index = this.universe.indexes.itemtype;
 			itemtypes.source_index = this.universe.indexes.itemtype;
 			attrs.source_index = this.universe.indexes.modifierattrs;
 			stats.source_index = this.universe.indexes.modifierstats;
 			abilities.source_index = this.universe.indexes.ability;
+			slots.source_index = this.universe.indexes.slot;
 			items.source_index = this.universe.indexes.item;
 			notes.source_index = this.universe.indexes.note;
 		},

@@ -1,5 +1,5 @@
 .system-component.system-info {
-	position: absolute;
+	position: fixed;
 	display: flex;
 	flex-direction: column;
 	top: 0px;
@@ -37,6 +37,7 @@
 			align-items: center;
 			font-size: 22px;
 			padding: 3px;
+			overflow: hidden;
 			
 			.icon {
 				margin-right: 3px;
@@ -84,6 +85,10 @@
 			
 			td:first-child {
 				white-space: nowrap;
+			}
+			
+			td {
+				padding: 2px;
 			}
 			
 			tr:nth-child(odd) {
@@ -194,6 +199,17 @@
 			&:hover {
 				background-color: #e0aef7;
 				color: @rsBlue;
+			}
+			
+			&.requirements {
+				color: @rsDarkRed;
+				border: 1px solid @rsDarkRed;
+				cursor: not-allowed;
+			
+				&:hover {
+					background-color: @rsLightRed;
+					color: @rsBlack;
+				}
 			}
 		}
 	}

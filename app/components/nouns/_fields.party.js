@@ -48,24 +48,94 @@
 		"property": "name",
 		"type": "text"
 	}, {
+		"label": "Label",
+		"property": "label",
+		"type": "text"
+	}, {
 		"label": "Icon",
 		"property": "icon",
 		"knowledge": "knowledge:system:icons",
 		"type": "text"
+	}, {
+		"label": "Description",
+		"property": "description",
+		"type": "textarea"
 	},
 	location,
 	inside,
 	{
+		"label": "Order",
+		"property": "order",
+		"type": "select",
+		"raw": true,
+		"options": [
+			20,
+			19,
+			18,
+			17,
+			16,
+			15,
+			14,
+			13,
+			12,
+			11,
+			10,
+			9,
+			8,
+			7,
+			6,
+			5,
+			4,
+			3,
+			2,
+			1,
+			0
+		]
+	}, {
+		"label": "Hide Stats",
+		"property": "hide_stats",
+		"knowledge": "knowledge:system:hide:stats",
+		"type": "checkbox"
+	}, {
+		"label": "Hide Relations",
+		"property": "hide_relations",
+		"knowledge": "knowledge:system:hide:relations",
+		"type": "checkbox",
+		"condition": {
+			"hide_stats": {
+				"operation": "test",
+				"value": false
+			}
+		}
+	}, {
+		"label": "Hide Properties",
+		"property": "hide_properties",
+		"knowledge": "knowledge:system:hide:properties",
+		"type": "checkbox",
+		"condition": {
+			"hide_stats": {
+				"operation": "test",
+				"value": false
+			}
+		}
+	}, {
+		"label": "Suppressed",
+		"property": "suppressed",
+		"knowledge": "knowledge:system:suppressed",
+		"type": "checkbox"
+	}, {
 		"label": "Active",
 		"property": "active",
 		"type": "checkbox"
 	}, {
 		"label": "Hidden",
 		"property": "hidden",
+		"knowledge": "knowledge:system:hidden",
 		"type": "checkbox"
 	}, {
 		"label": "Obscured",
 		"property": "obscured",
+		"knowledge": "knowledge:system:obscured",
 		"type": "checkbox"
 	},
 	entities,

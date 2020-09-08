@@ -72,6 +72,41 @@
 		"only": true,
 		"out": false
 	};
+
+
+	var rollProperties = [{
+		"icon": "ra ra-bomb-explosion",
+		"property": "success",
+		"label": "Success"
+	}, {
+		"icon": "fad fa-jedi",
+		"property": "advantage",
+		"label": "Advantage"
+	}, {
+		"icon": "xwm xwing-miniatures-font-epic",
+		"property": "triumph",
+		"label": "Triumph"
+	}, {
+		"icon": "fal fa-triangle rot180",
+		"property": "failure",
+		"label": "Failure"
+	}, {
+		"icon": "rsswx rsswx-threat",
+		"property": "threat",
+		"label": "Threat"
+	}, {
+		"icon": "rsswx rsswx-despair",
+		"property": "despair",
+		"label": "Despair"
+	}, {
+		"icon": "fad fa-circle rs-white rs-secondary-black",
+		"property": "light",
+		"label": "Light"
+	}, {
+		"icon": "fad fa-circle rs-black rs-secondary-white",
+		"property": "dark",
+		"label": "Dark"
+	}];
 	
 	rsSystem.component("RSSWUniverse", {
 		"inherit": true,
@@ -133,7 +168,7 @@
 			if(data.state.paging === undefined) {
 				data.state.paging = {};
 				data.state.paging.per = 20;
-				data.state.paging.current = 1;
+				data.state.paging.current = 0;
 				data.state.paging.pages = 0;
 				data.state.paging.spread = 10;
 			}
@@ -152,7 +187,28 @@
 			data.target = "";
 			data.corpus = [];
 			
-			data.universeEntities = [];			
+			data.rollProperties = rollProperties;
+			data.universeEntities = [];
+			data.maxLength = 20;
+			data.history = [];
+			data.rolling = {};
+			data.updated = "";
+			
+			data.difficulty = {};
+			data.difficulty.Blank = {"difficulty":0};
+			data.difficulty.Easy = {"difficulty":1};
+			data.difficulty.Average = {"difficulty":2};
+			data.difficulty.Hard = {"difficulty":3};
+			data.difficulty.Daunting = {"difficulty":4};
+			data.difficulty.Formidable = {"difficulty":5};
+			data.difficulty.Challenge = {"challenge":1};
+			data.difficulty.Setback = {"setback":1};
+			
+			data.difficulties = Object.keys(data.difficulty);
+			data.count = {};
+			for(x=0; x<data.difficulties.length; x++) {
+				data.count[data.difficulties[x]] = 0;
+			}
 			
 			for(x=0; x<data.state.headers.length; x++) {
 				if(formatters[data.state.headers[x].field]) {
@@ -173,13 +229,16 @@
 			}
 			
 			data.state.filter.template = false;
+			if(!data.state.historyLength) {
+				data.state.historyLength = 5;
+			}
 			
 			return data;
 		},
 		"watch": {
 			"state": {
 				"deep": true,
-				"handler": function() {
+				"handler": function(nV, oV) {
 //					if(this.state.search !== this.state.search.toLowerCase()) {
 //						Vue.set(this.state.filter, "null", this.state.search.toLowerCase());
 //					}
@@ -188,17 +247,76 @@
 					} else {
 						Vue.delete(this.state.filter, "template");
 					}
-					this.saveStorage(this.storageKeyID, this.state);
+					this.saveStorage(this.storageKeyID, nV);
 				}
 			}
 		},
 		"mounted": function() {
 			rsSystem.register(this);
+
+			if(templateValues[this.state.filterTemplate] !== undefined) {
+				Vue.set(this.state.filter, "template", templateValues[this.state.filterTemplate]);
+			} else {
+				Vue.delete(this.state.filter, "template");
+			}
 			
 			this.universe.$on("universe:modified", this.updateListings);
 			this.updateListings();
 		},
 		"methods": {
+			"clearRolling": function(object) {
+				var keys = Object.keys(object),
+					x;
+				
+				this.history.unshift(JSON.parse(JSON.stringify(object)));
+				if(this.state.historyLength < this.history.length) {
+					this.history.splice(this.state.historyLength);
+				}
+				for(x=0; x<keys.length; x++) {
+					Vue.delete(object, keys[x]);
+				}
+			},
+			"dismissRolled": function(object) {
+				var index = this.history.indexOf(object);
+				if(index !== -1) {
+					this.history.splice(index, 1);
+				}
+			},
+			"clearRolls": function(step) {
+				if(step) {
+					this.clearRolling();
+				}
+				this.history.splice(0);
+			},
+			"clearRolls": function() {
+				this.history.splice(0);
+			},
+			"rollDifficulty": function(difficulty) {
+				var expression = this.difficulty[difficulty],
+					result,
+					keys,
+					x;
+				
+//				console.log("Roll[" + isNaN(expression.difficulty) + "]: ", expression.difficulty);
+				if(!isNaN(expression.difficulty)) {
+					this.clearRolling(this.rolling);
+					for(x=0; x<this.difficulties.length; x++) {
+						Vue.set(this.count, this.difficulties[x], 0);
+					}
+				}
+				Vue.set(this.count, difficulty, this.count[difficulty] + 1);
+				result = Dice.calculateDiceRoll(expression);
+				keys = Object.keys(result);
+				for(x=0; x<keys.length; x++) {
+					if(result[keys[x]]) {
+						if(this.rolling[keys[x]]) {
+							Vue.set(this.rolling, keys[x], this.rolling[keys[x]] + result[keys[x]]);
+						} else {
+							Vue.set(this.rolling, keys[x], result[keys[x]]);
+						}
+					}
+				}
+			},
 			"updateListings": function(event) {
 				var mapped = {},
 					buffer,
@@ -281,11 +399,27 @@
 					possibles.push(x);
 				}
 
+
+				if(start > 100) {
+					possibles.unshift(100);
+				}
+				if(start > 50) {
+					possibles.unshift(50);
+				}
+				if(start > 20) {
+					possibles.unshift(20);
+				}
 				if(start > 10) {
 					possibles.unshift(10);
 				}
 				if(start > 2) {
 					possibles.unshift(2);
+				}
+				if(end < 10) {
+					possibles.push(10);
+				}
+				if(end < 20) {
+					possibles.push(20);
 				}
 				if(end < 50) {
 					possibles.push(50);
@@ -301,6 +435,7 @@
 					target = this.universe.index.lookup[this.target],
 					loading,
 					sending,
+					buffer,
 					item,
 					keys,
 					x;
@@ -311,39 +446,43 @@
 				switch(command) {
 					case "give":
 //						console.warn("Giving Items");
-						for(x=0; x<index.selection.length; x++) {
-							console.warn("Sending " + index.selection[x] + "...");
-							if(this.universe.nouns.item[index.selection[x]]) {
-								sending = {};
-								sending.item = index.selection[x];
-								sending.target = this.target;
-								this.universe.send("give:item", sending);
-							} else if(this.universe.nouns.room[index.selection[x]]) {
-								sending = {};
-								sending.room = index.selection[x];
-								sending.target = this.target;
-								this.universe.send("give:room", sending);
-							} else {
-								console.warn("Can only give item & room objects");
+						if(this.target) {
+							for(x=0; x<index.selection.length; x++) {
+								console.warn("Sending " + index.selection[x] + "...");
+								if(this.universe.nouns.item[index.selection[x]]) {
+									sending = {};
+									sending.item = index.selection[x];
+									sending.target = this.target;
+									this.universe.send("give:item", sending);
+								} else if(this.universe.nouns.room[index.selection[x]]) {
+									sending = {};
+									sending.room = index.selection[x];
+									sending.target = this.target;
+									this.universe.send("give:room", sending);
+								} else {
+									console.warn("Can only give item & room objects");
+								}
 							}
 						}
 						break;
 					case "take":
 //						console.warn("Taking Items");
-						for(x=0; x<index.selection.length; x++) {
-							console.warn("Sending " + index.selection[x] + "...");
-							if(this.universe.nouns.item[index.selection[x]]) {
-								sending = {};
-								sending.item = index.selection[x];
-								sending.target = this.target;
-								this.universe.send("take:item", sending);
-							} else if(this.universe.nouns.room[index.selection[x]]) {
-								sending = {};
-								sending.room = index.selection[x];
-								sending.target = this.target;
-								this.universe.send("take:room", sending);
-							} else {
-								console.warn("Can only take item & room objects");
+						if(this.target) {
+							for(x=0; x<index.selection.length; x++) {
+								console.warn("Sending " + index.selection[x] + "...");
+								if(this.universe.nouns.item[index.selection[x]]) {
+									sending = {};
+									sending.item = index.selection[x];
+									sending.target = this.target;
+									this.universe.send("take:item", sending);
+								} else if(this.universe.nouns.room[index.selection[x]]) {
+									sending = {};
+									sending.room = index.selection[x];
+									sending.target = this.target;
+									this.universe.send("take:room", sending);
+								} else {
+									console.warn("Can only take item & room objects");
+								}
 							}
 						}
 						break;
@@ -391,20 +530,23 @@
 								keys = Object.keys(loading);
 								sending = {};
 								
-								for(x=0; x<keys.length; x++) {
-									if(keys[x] && keys[x][0] !== "_") {
-										sending[keys[x]] = loading[keys[x]];
-									}
-								}
+//								for(x=0; x<keys.length; x++) {
+//									if(keys[x] && keys[x][0] !== "_") {
+//										sending[keys[x]] = loading[keys[x]];
+//									}
+//								}
 								
 								sending.parent = loading.id;
 								sending.name = loading.name + " (New)";
-								sending.description = loading.description;
+//								sending.description = loading.description;
 								sending.id += ":" + Date.now();
 								sending.template = false;
 								sending._type = "entity";
-								if(this.target) {
+								if(this.target && this.universe.indexes.player.index[this.target]) {
 									sending.owners = [this.target];
+								}
+								if(this.target && this.universe.indexes.entity.index[this.target]) {
+									sending.inside = this.target;
 								}
 	
 								this.universe.send("modify:entity", sending);
@@ -422,23 +564,40 @@
 					case "grant-knowledge":
 						if(target) {
 							sending = [];
+							buffer = [];
 							for(x=0; x<index.selection.length; x++) {
 								if(this.universe.indexes.knowledge.lookup[index.selection[x]]) {
 									sending.push(index.selection[x]);
+								} else {
+									buffer.push(index.selection[x]);
 								}
 							}
-							target.learnKnowledge(sending);
+							console.log("Granting: ", sending, buffer);
+							if(sending.length) {
+								target.learnKnowledge(sending);
+							}
+							if(buffer.length) {
+								target.learnOfObjects(buffer);
+							}
 						}
 						break;
 					case "forget-knowledge":
 						if(target) {
 							sending = [];
+							buffer = [];
 							for(x=0; x<index.selection.length; x++) {
 								if(this.universe.indexes.knowledge.lookup[index.selection[x]]) {
 									sending.push(index.selection[x]);
+								} else {
+									buffer.push(index.selection[x]);
 								}
 							}
-							target.forgetKnowledge(sending);
+							if(sending.length) {
+								target.forgetKnowledge(sending);
+							}
+							if(buffer.length) {
+								target.unlearnOfObjects(buffer);
+							}
 						}
 						break;
 				}

@@ -2,14 +2,41 @@
 (function() {
 	
 	var dataSource,
-		dependency,
+		dependencies,
+		archetypes,
+		knowledges,
+		parent,
 		attrs,
 		stats,
 		notes;
 
-	dependency = {
-		"label": "Dependencies",
-		"property": "dependency",
+	parent = {
+		"label": "Parent",
+		"property": "parent", // Not "entity" as modifier inheritence is not wanted
+		"type": "select",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+	
+	archetypes = {
+		"label": "Archetypes",
+		"property": "archetypes",
+		"type": "multireference",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+
+	knowledges = {
+		"label": "Knowledges",
+		"property": "requires_knowledge",
+		"type": "multireference",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+
+	dependencies = {
+		"label": "Abilities",
+		"property": "requires_ability",
 		"type": "multireference",
 		"optionValue": "id",
 		"optionLabel": "name"
@@ -43,7 +70,9 @@
 		"label": "ID",
 		"property": "id",
 		"type": "text"
-	}, {
+	},
+	parent,
+	{
 		"label": "Name",
 		"property": "name",
 		"type": "text"
@@ -51,6 +80,10 @@
 		"label": "Icon",
 		"property": "icon",
 		"knowledge": "knowledge:system:icons",
+		"type": "text"
+	},{
+		"label": "Renderer",
+		"property": "information_renderer",
 		"type": "text"
 	}, {
 		"label": "XP Cost",
@@ -98,6 +131,14 @@
 			"active"
 		]
 	}, {
+		"label": "Template",
+		"property": "template",
+		"type": "checkbox"
+	}, {
+		"label": "Locked",
+		"property": "locked_ability",
+		"type": "checkbox"
+	}, {
 		"label": "Hidden",
 		"property": "hidden",
 		"type": "checkbox"
@@ -112,14 +153,19 @@
 		"optionValue": "id",
 		"optionLabel": "name",
 		"options": [{
-			"name": "Any",
+			"name": "Default (Any)",
 			"id": undefined
+		}, {
+			"name": "Any",
+			"id": "any"
 		}, {
 			"name": "All",
 			"id": "all"
 		}]
 	},
-	dependency,
+	archetypes,
+	dependencies,
+	knowledges,
 	attrs,
 	stats,
 	{
@@ -151,7 +197,12 @@
 			return data;
 		},
 		"mounted": function() {
-			dependency.source_index = this.universe.indexes.ability;
+			parent.options = this.universe.indexes.ability.listing;
+			parent.options.sortBy("name");
+			
+			archetypes.source_index = this.universe.indexes.archetype;
+			dependencies.source_index = this.universe.indexes.ability;
+			knowledges.source_index = this.universe.indexes.knowledge;
 			attrs.source_index = this.universe.indexes.modifierattrs;
 			stats.source_index = this.universe.indexes.modifierstats;
 			notes.source_index = this.universe.indexes.note;

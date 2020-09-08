@@ -9,7 +9,9 @@
 (function() {
 	var storageKey = "_rs_nounComponentKey";
 	
-	var spacing = / /g;
+	var spacing = /[ _-]/g;
+
+	var toColon = /[^a-zA-Z0-9]+/g;
 	
 	var byName = function(a, b) {
 		a = (a.name || "").toLowerCase();
@@ -53,14 +55,20 @@
 
 			rsSystem.components.NounFieldsModifierStats,
 			rsSystem.components.NounFieldsModifierAttrs,
+			rsSystem.components.NounFieldsArchetype,
 			rsSystem.components.NounFieldsKnowledge,
+			rsSystem.components.NounFieldsStreamURL,
 			rsSystem.components.NounFieldsItemType,
 			rsSystem.components.NounFieldsLocation,
 			rsSystem.components.NounFieldsPlaylist,
 			rsSystem.components.NounFieldsAbility,
 			rsSystem.components.NounFieldsDataset,
+			rsSystem.components.NounFieldsJournal,
+			rsSystem.components.NounFieldsSession,
+			rsSystem.components.NounFieldsSetting,
 			rsSystem.components.NounFieldsEntity,
 			rsSystem.components.NounFieldsEffect,
+			rsSystem.components.NounFieldsLocale,
 			rsSystem.components.NounFieldsPlayer,
 			rsSystem.components.NounFieldsWidget,
 			rsSystem.components.NounFieldsParty,
@@ -70,6 +78,7 @@
 			rsSystem.components.NounFieldsRace,
 			rsSystem.components.NounFieldsRoom,
 			rsSystem.components.NounFieldsSlot,
+			rsSystem.components.NounFieldsType,
 			rsSystem.components.NounFieldsSex
 		],
 		"props": {
@@ -124,6 +133,7 @@
 			"copy": function(value) {
 				if(value) {
 					var copy = this.universe.nouns[this.state.current][value],
+						buffer,
 						x;
 					
 //					if(!copy) {
@@ -134,30 +144,48 @@
 					
 					value = copy?JSON.stringify(copy, null, 4):"{}";
 					value = JSON.parse(value);
+//					console.warn("Copying: ", value);
 					if(copy && copy.template && this.state.building[this.state.current].parent !== copy.id && (this.$route.params.oid !== copy.id || (this.$route.params.oid === copy.id && this.$route.query.copy === "true"))) {
-						value.parent = value.id;
-						value.id += ":" + Date.now();
-						if(value.randomize_name) {
-							copy = this.getGenerator(value.race);
-							if(copy) {
-								value.name = copy.corpus[Random.integer(copy.corpus.length)].capitalize();
-								for(x=1; x<value.randomize_name; x++) {
-									value.name += " " + copy.corpus[Random.integer(copy.corpus.length)].capitalize();
+						console.log("> Template");
+						value = {};
+						value.parent = copy.id;
+						value.id = copy.id + ":" + Date.now();
+						value.name = "";
+						if(copy.randomize_name) {
+							if(copy.randomize_name_dataset && (buffer = this.universe.indexes.dataset.index[copy.randomize_name_dataset])) {
+								buffer = new NameGenerator(buffer.set);
+							} else if(copy.race) {
+								console.log("Copying by Race");
+								buffer = this.getGenerator(copy.race);
+							}
+							if(copy.randomize_name_prefix) {
+								value.name += copy.randomize_name_prefix + " ";
+							}
+							if(buffer) {
+								value.name += buffer.corpus[Random.integer(buffer.corpus.length)].capitalize();
+								for(x=1; x<copy.randomize_name; x++) {
+									if(copy.randomize_name_spacing) {
+										value.name += " ";
+									}
+									value.name += buffer.corpus[Random.integer(buffer.corpus.length)].capitalize();
 								}
 							}
+							if(copy.randomize_name_suffix) {
+								value.name += " " + copy.randomize_name_suffix;
+							}
 						}
-						delete(value.randomize_name);
-						delete(value.template);
-					}
-					if((!copy || (copy && !copy.template)) && this.$route.query.copy === "true") {
-						value.id += ":" + Date.now();
-					}
-					if(this.$route.query.values) {
-						try {
-							copy = JSON.parse(this.$route.query.values);
-							Object.assign(value, copy);
-						} catch(exception) {
-							console.warn("Failed to load values due to parse exception: ", exception);
+					} else {
+//						console.log("> Original");
+						if((!copy || (copy && !copy.template)) && this.$route.query.copy === "true") {
+							value.id += ":" + Date.now();
+						}
+						if(this.$route.query.values) {
+							try {
+								copy = JSON.parse(this.$route.query.values);
+								Object.assign(value, copy);
+							} catch(exception) {
+								console.warn("Failed to load values due to parse exception: ", exception);
+							}
 						}
 					}
 					value = JSON.stringify(value, null, 4);
@@ -263,6 +291,46 @@
 			this.universeUpdate();
 		},
 		"methods": {
+			"nameRandomization": function(root, generator) {
+				var name = "",
+					x;
+				
+				if(root.randomize_name) {
+					if(!generator) {
+						if(root.randomize_name_dataset && (generator = this.universe.indexes.dataset.index[root.randomize_name_dataset])) {
+							generator = new NameGenerator(generator.set);
+						} else if(root.race) {
+							generator = this.getGenerator(root.race);
+						}
+					}
+					if(root.randomize_name_prefix) {
+						name += root.randomize_name_prefix + " ";
+					}
+					if(generator) {
+						name += generator.corpus[Random.integer(generator.corpus.length)].capitalize();
+						for(x=1; x<root.randomize_name; x++) {
+							if(root.randomize_name_spacing) {
+								name += " ";
+							}
+							name += generator.corpus[Random.integer(generator.corpus.length)].capitalize();
+						}
+					}
+					if(root.randomize_name_suffix) {
+						name += " " + root.randomize_name_suffix;
+					}
+				}
+				
+				return name;
+			},
+			"viewParentInfo": function() {
+				rsSystem.EventBus.$emit("display-info", this.state.building[this.state.current].parent);
+			},
+			"activeCopying": function() {
+				return this.$route.query.copy === "true";
+			},
+			"changeHandler": function(field) {
+				
+			},
 			"buildAvailableCopies": function() {
 				this.availableToCopy.splice(0);
 				this.availableToCopy.push.apply(this.availableToCopy, this.universe.indexes[this.state.current].listing);
@@ -275,21 +343,53 @@
 				}
 			},
 			"hasGenerator": function(race) {
+				race = race || this.models[this.state.current].race;
+				return (race && this.universe.indexes.race.index[race] && this.universe.indexes.race.index[race].dataset)
+					|| (!race && this.universe.defaultDataset);
+				/*
 				race = race || this.state.building[this.state.current].race;
 				return (race && this.universe.indexes.race.index[race] && this.universe.indexes.race.index[race].dataset)
 					|| (!race && this.universe.defaultDataset);
+					*/
 			},
 			"pullRandomName": function(generator) {
-				generator = generator || this.getGenerator(this.state.building[this.state.current].race);
-				if(generator) {
-					Vue.set(this.state.building[this.state.current], "name", generator.corpus[Random.integer(generator.corpus.length)].capitalize() + " " + generator.corpus[Random.integer(generator.corpus.length)].capitalize());
+				if(this.models[this.state.current].randomize_name) {
+					Vue.set(this.state.building[this.state.current], "name",this.nameRandomization(this.models[this.state.current], generator));
+				} else {
+					if(this.state.current === "session") {
+						Vue.set(this.state.building[this.state.current], "name", new String(this.universe.indexes.session.listing.length + 1));
+					} else {
+						generator = generator || this.getGenerator(this.state.building[this.state.current].race);
+						if(generator) {
+							Vue.set(this.state.building[this.state.current], "name", generator.corpus[Random.integer(generator.corpus.length)].capitalize() + " " + generator.corpus[Random.integer(generator.corpus.length)].capitalize());
+						}
+					}
 				}
+				/*
+				if(this.state.current === "session") {
+					Vue.set(this.state.building[this.state.current], "name", new String(this.universe.indexes.session.listing.length + 1));
+				} else {
+					generator = generator || this.getGenerator(this.state.building[this.state.current].race);
+					if(generator) {
+						Vue.set(this.state.building[this.state.current], "name", generator.corpus[Random.integer(generator.corpus.length)].capitalize() + " " + generator.corpus[Random.integer(generator.corpus.length)].capitalize());
+					}
+				}
+				*/
 			},
 			"randomizeName": function(generator) {
+				generator = generator || this.getGenerator(this.models[this.state.current].race);
+				if(generator) {
+					Vue.set(this.state.building[this.state.current], "name", generator.create().capitalize() + " " + generator.create().capitalize());
+				}
+				/*
 				generator = generator || this.getGenerator(this.state.building[this.state.current].race);
 				if(generator) {
 					Vue.set(this.state.building[this.state.current], "name", generator.create().capitalize() + " " + generator.create().capitalize());
 				}
+				*/
+			},
+			"setDateNow": function(property) {
+				Vue.set(this.state.building[this.state.current], property, Date.now());
 			},
 			"getGenerator": function(race) {
 				var generator = null,
@@ -313,7 +413,7 @@
 				} else if(this.universe.defaultDataset) {
 					if(!this.nameGenerators._default) {
 						if(!this.universe.defaultDataset.set) {
-							console.warn("UI[pdate: ", this.universe.defaultDataset);
+							console.warn("Update: ", this.universe.defaultDataset);
 							this.universe.defaultDataset.recalculateProperties();
 						}
 						generator = new NameGenerator(this.universe.defaultDataset.set);
@@ -335,6 +435,49 @@
 					rsSystem.EventBus.$emit("display-info", this.universe.index.index[id]);
 				} else {
 					console.warn("ID Not Found for Knowledge: ", id);
+				}
+			},
+			"getIDFromName": function() {
+				var model = this.models[this.state.current],
+					buffer,
+					root;
+				
+				if(model.name) {
+					if(this.state.current === "session") {
+						buffer = model.label;
+						while(buffer.length < 5) {
+							buffer = "0" + buffer;
+						}
+						root = this.state.current + ":" + (buffer.toLowerCase?buffer.toLowerCase().replace(spacing, "").replace(toColon, ":"):buffer);
+					} else {
+						root = this.state.current + ":" + (model.name.toLowerCase?model.name.toLowerCase().replace(spacing, "").replace(toColon, ":"):model.name);
+					}
+					switch(this.state.current) {
+						case "ability":
+							if(model.archetypes && model.archetypes.length) {
+								if((model.archetypes instanceof Array && model.archetypes.length && (buffer = this.universe.indexes.archetype.index[model.archetypes[0]])) ||
+										(buffer = this.universe.indexes.archetype.index[model.archetypes])) {
+									root += ":" + buffer.name.toLowerCase().replace(spacing, "");
+								}
+							}
+							if(model.xp_cost) {
+								root += ":" + model.xp_cost;
+							}
+						default:
+							return root;
+					}
+				}
+			},
+			"syncID": function() {
+				Vue.set(this.state.building[this.state.current], "id", this.getIDFromName());
+			},
+			"adjust": function(field) {
+				switch(field) {
+					case "name":
+						if(this.models[this.state.current] && !this.models[this.state.current].id) {
+							Vue.set(this.state.building[this.state.current], "id", this.getIDFromName());
+						}
+						break;
 				}
 			},
 			"sync": function(event) {
@@ -478,6 +621,7 @@
 				this.buildAvailableCopies();
 			},
 			"modify": function() {
+				var buffer;
 //				console.warn("modify: ", event);
 				
 				if(this.isValid) {
@@ -492,7 +636,12 @@
 					} else {
 //						console.warn("sync: ", this.state.building[this.state.current]);
 						this.state.building[this.state.current]._type = this.state.current;
-						this.universe.send("modify:" + this.state.current, completeItem(this.state.current, this.state.building[this.state.current]));
+						buffer = completeItem(this.state.current, this.state.building[this.state.current]);
+						if(buffer.passcode) {
+							buffer.passcode = buffer.passcode.sha256();
+						}
+						this.universe.send("modify:" + this.state.current, buffer);
+						delete(buffer.passcode);
 					}
 				}
 			}

@@ -22,8 +22,9 @@ var config = {
 				],
 				"comma-dangle": 2,
 				"quotes": [2, "double"],
-				"no-unused-vars": [2, {
-						"varsIgnorePattern": "^_?ignore"
+				"no-unused-vars": [1, {
+						"varsIgnorePattern": "^(_|[A-Z])",
+						"args": "after-used"
 					}
 				],
 				"block-scoped-var": 2,
@@ -32,8 +33,7 @@ var config = {
 				"max-depth": [1, {
 						"max": 10
 					}
-				],
-				"no-unused-vars": 1
+				]
 			},
 			"terminateOnCallback": false,
 			"callback": function (response) {
@@ -94,6 +94,7 @@ var config = {
 				"NameGenerator",
 				"EventEmitter",
 				"SearchIndex",
+				"filterXSS",
 				"Component",
 				"Invasion",
 				"Anomaly",
@@ -105,26 +106,32 @@ var config = {
 				"UserInformation",
 				"RSModifierStats",
 				"RSCalculator",
-				"RSCondition",
 				"RSArchetype",
+				"RSCondition",
 				"RSInventory",
-				"RSItemType",
 				"RSKnowledge",
+				"RSStreamURL",
+				"RSItemType",
 				"RSPlaylist",
 				"RSLogLevel",
 				"RSLocation",
 				"RSUniverse",
 				"RSModifier",
 				"RSAbility",
+				"RSJournal",
+				"RSSetting",
 				"RSHistory",
 				"RSDataset",
 				"RSLoadout",
+				"RSSession",
 				"RSPlayer",
 				"RSObject",
 				"RSEffect",
 				"RSEntity",
+				"RSLocale",
 				"RSPlanet",
 				"RSWidget",
+				"RSEvent",
 				"RSImage",
 				"RSParty",
 				"RSSkill",
@@ -134,12 +141,15 @@ var config = {
 				"RSRace",
 				"RSRoom",
 				"RSSlot",
+				"RSType",
 				"RSLog",
 				"RSSex"
 			]
 		},
 		"app": [
 			"spec/app/**/*.js",
+			"appWorker/**/*.js",
+			"appWorker/*.js",
 			"app/**/*.js",
 			"app/*.js"
 		]
@@ -181,6 +191,7 @@ var config = {
 			},
 			"files": [
 				"Gruntfile.js",
+				"appWorker/**/*.js",
 				"app/manifest.json",
 				"app/**/*.less",
 				"app/**/*.json",
@@ -189,7 +200,7 @@ var config = {
 				"app/**/*.js",
 				"spec/**/*.js"
 			],
-			"tasks": ["build"]
+			"tasks": ["development"]
 		},
 		"docs": {
 			"files": [
@@ -199,20 +210,40 @@ var config = {
 		}
 	},
 	"concat": {
-		"app": {
+		// These files corrupt the sourcemap for main for whatever reason so they handled separately
+		"worker": {
+			"options": {
+				"sourceMap": false
+			},
+			"src": [
+				"appWorker/**/*.js",
+				"appWorker/*.js"
+			],
+			"dest": "deploy/worker.js"
+		},
+		"externals": {
 			"options": {
 				"sourceMap": true
 			},
 			"src": [
+				"external/cytoscape.js",
+				"external/cola.js",
+				"external/cytoscape-cola.js"
+			],
+			"dest": "deploy/externals.js"
+		},
+		"app": {
+			"options": {
+				"footer": "\nrsSystem.version=\"" + pkg.version + "\"",
+				"sourceMap": true
+			},
+			"src": [
+				"node_modules/xss/dist/xss.min.js",
 				"node_modules/hammerjs/hammer.js",
 				"node_modules/showdown/dist/showdown.min.js",
 				"node_modules/vue/dist/vue.js",
 				"node_modules/jquery/dist/jquery.min.js",
 				"node_modules/vue-router/dist/vue-router.js",
-				
-				"node_modules/cytoscape/dist/cytoscape.js",
-				"node_modules/cytoscape-cola/cola.js",
-				"node_modules/cytoscape-cola/cytoscape-cola.js",
 
 				"transient/templates.js",
 				"app/library/*.js",
@@ -247,6 +278,66 @@ var config = {
 				"app/components/**/*.less"
 			],
 			"dest": "deploy/app.less"
+		}
+	},
+	"uglify": {
+		"options": {
+			"sourceMap": true
+		},
+		"app": {
+			"options": {
+				"footer": "\nrsSystem.version = \"" + pkg.version + "\"",
+				"reserved": ["rsSystem"]
+			},
+			"files": {
+				"deploy/main.js": [
+					"node_modules/xss/dist/xss.min.js",
+					"node_modules/hammerjs/hammer.js",
+					"node_modules/showdown/dist/showdown.min.js",
+					"node_modules/vue/dist/vue.js",
+					"node_modules/jquery/dist/jquery.min.js",
+					"node_modules/vue-router/dist/vue-router.js",
+
+					"transient/templates.js",
+					"app/library/*.js",
+					"app/library/*/**/*.js",
+
+					"app/core/*.js",
+					"app/core/*/**/*.js",
+					
+					"app/common/*.js",
+					"app/common/*/**/*.js",
+					
+					"app/components/*.js",
+					"app/components/*/**/*.js",
+
+					"app/subcomponents/*.js",
+					"app/subcomponents/*/**/*.js",
+
+					"app/pages/*.js",
+					"app/pages/*/**/*.js",
+
+					"app/main/*/**/*.js",
+					"app/main/*.js"
+				]
+			}
+		},
+		"externals": {
+			"files": {
+				"deploy/externals.js": [
+					"external/cytoscape.js",
+					"external/cola.js",
+					"external/cytoscape-cola.js"
+				]
+			}
+		},
+		"worker": {
+			"files": {
+				"deploy/worker.js": [
+					"appWorker/**/*.js",
+					"appWorker/*.js"
+				]
+			}
 		}
 	},
 	"less": {
@@ -323,6 +414,7 @@ module.exports = function (grunt) {
 
 	grunt.initConfig(config);
 
-	grunt.registerTask("build", ["eslint", "templify:app","concat:app","concat:less","less:app"]);
-	grunt.registerTask("default", ["build","connect:app","open:app", "watch:app"]);
+	grunt.registerTask("build", ["eslint", "templify:app","uglify:worker","uglify:externals","uglify:app","concat:less","less:app"]);
+	grunt.registerTask("development", ["eslint", "templify:app","concat:worker","concat:externals","concat:app","concat:less","less:app"]);
+	grunt.registerTask("default", ["development","concat:worker","concat:externals","connect:app","open:app", "watch:app"]);
 };

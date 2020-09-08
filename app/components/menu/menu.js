@@ -75,6 +75,16 @@
 				}]
 			});
 			data.navigationItems.push({
+				"icon": "far fa-desktop",
+				"action": "navigate",
+				"label": "Screen",
+				"path": "/master",
+				"highlight": "/master",
+				"conditionals": [{
+					"master": true
+				}]
+			});
+			data.navigationItems.push({
 				"icon": "fad fa-galaxy",
 				"action": "navigate",
 				"label": "Galaxy",
@@ -100,6 +110,32 @@
 				"label": "Map",
 				"path": "/map",
 				"highlight": "/map"
+			});
+			data.navigationItems.push({
+				"icon": "fas fa-users",
+				"action": "navigate",
+				"label": "Party",
+				"path": "/party",
+				"highlight": "/party",
+				"conditionals": [{
+					"master": true
+				}]
+			});
+			
+			data.navigationItems.push(bufferItem);
+			data.navigationItems.push({
+				"icon": "far fa-user",
+				"action": "navigate",
+				"label": "Account",
+				"path": "/account",
+				"highlight": "/account"
+			});
+			data.navigationItems.push({
+				"icon": "far fa-server",
+				"action": "navigate",
+				"label": "System",
+				"path": "/system",
+				"highlight": "/system"
 			});
 			
 			data.generalItems = [];

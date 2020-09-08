@@ -9,6 +9,10 @@
 		left: 0px;
 		top: 0px;
 	}
+	
+	.rotational-icon {
+		transition: transform .5s; 
+	}
 
 	.map {
 		position: relative;
@@ -16,6 +20,7 @@
 		user-select: none;
 		width: 100%;
 		height: 100%;
+		font-size: inherit;
 	
 		.barrier {
 			background-color: transparent;
@@ -26,6 +31,11 @@
 			top: 0px;
 			z-index: 4;
 		}
+		
+		button.scaled,
+		span.scaled {
+			font-size: inherit !important;
+		}
 	
 		.view {
 			position: relative;
@@ -34,6 +44,7 @@
 			width: 100%;
 			height: 100%;
 			background: black;
+			font-size: inherit;
 			
 			.coordinates {
 				position: absolute;
@@ -73,7 +84,7 @@
 				background: transparent;
 				height: 100%;
 				width: 100%;
-				z-index: 6;
+				z-index: 15;
 					
 				.dot {
 					background-color: red;
@@ -90,6 +101,7 @@
 				position: absolute;
 				background: transparent;
 				z-index: 3;
+				font-size: inherit;
 				
 				&.x {
 					border-right: 1px solid red;
@@ -124,7 +136,8 @@
 			.parchment {
 				position: absolute;
 				z-index: 1;
-				transition: width .5s, height .5s;
+				/*transition: width .5s, height .5s;*/
+				font-size: inherit;
 				
 				img {
 					position: absolute;
@@ -133,34 +146,44 @@
 				}
 				
 				.poi {
+					display: flex;
 					position: absolute;
-					margin-left: -10px;
-					border-radius: 40px;
+					margin-left: -1em;
+					border-radius: 2em;
 					z-index: 50;
 					padding: 3px;
+					flex-direction: row;
+					align-items: center;
 					
-					min-height: 30px;
-					min-width: 30px;
+					min-height: 2em;
+					min-width: 2em;
 					cursor: pointer;
 					
-					margin-top: -10px;
+					margin-top: -1em;
 					color: @rsOrange;
 					text-align: center;
-					/*
-					margin-top: -10px;
-					opacity: .5;
-					background: red;
-					*/
 					
 					background-color: @rsBlack;
 
 					> * {
 						color: inherit;
 					}
+					
+					&.map-border {
+						
+					}
+					
+					&.no-border {
+						background-color: transparent !important;
+						border-color: transparent !important;
+					}
 
+					&:active,
+					&:focus,
 					&:hover {
 						background: rgba(18, 33, 146, 0.6);
 						/*opacity: .5;*/
+						z-index: 55;
 					}
 					
 					a {
@@ -171,7 +194,48 @@
 						text-align: left;
 					}
 					
+					.poi-icon {
+						min-width: 1.5em;
+						min-height: 1.5em;
+						line-height: 1.5em;
+					}
+					
 					.labeling {
+						/* V0.2 Style */
+						padding: 0px .5em;
+						color: #EAEFF9;
+						font-weight: 900;
+						overflow: hidden;
+						max-width: 300px;
+						transition: max-width .5s, padding .5s;
+						white-space: nowrap;
+						
+						&.hidden {
+							max-width: 0px;
+							padding: 0px;
+						}
+					
+						/* V0.1 Style
+						position: absolute;
+						top: -2px;
+						left: ~"calc(100% + -12px)";
+						padding: 0px 15px;
+						color: #EAEFF9;
+						font-weight: 900;
+						background-color: black;
+						white-space: nowrap;
+						height: 100%;
+						border-top-right-radius: 15px;
+						border-bottom-right-radius: 15px;
+						border-width: 2px;
+						border-style: outset;
+						border-color: buttonface;
+						border-left: 0px;
+						line-height: 24px;
+						z-index: 1;
+						*/
+						
+						/* V0 Style
 						position: absolute;
 						top: 0px;
 						left: ~"calc(100% + 10px)";
@@ -179,8 +243,21 @@
 						font-weight: 900;
 						background-color: black;
 						white-space: nowrap;
+						*/
 					}
 					
+					&.search-found .labeling,
+					&:active .labeling,
+					&:focus .labeling,
+					&:hover .labeling {
+						padding: 0px .5em;
+						max-width: 300px;
+					}
+						
+					&.search-hidden .labeling {
+						max-width: 0px;
+						padding: 0px;
+					}
 				}
 			}
 		}
@@ -190,8 +267,11 @@
 			z-index: 100;
 			background-color: black;
 			border: 2px solid @rsOrange;
+			margin: 0px !important;
+			/*
 			border-bottom-right-radius: 5px;
 			border-bottom-left-radius: 5px;
+			*/
 			
 			button {
 				border: 0px;
@@ -233,7 +313,7 @@
 				
 				.titling {
 					font-size: 1.3em;
-					padding-left: 7px;
+					padding: 0px 7px;
 				}
 				
 				span {
@@ -252,6 +332,7 @@
 					font-size: 22px;
 					height: 26px;
 					width: 26px;
+					padding: 0px;
 				}
 			}
 			
@@ -276,7 +357,7 @@
 				
 				button.option:hover {
 					border-bottom: 3px solid blue;
-				}	
+				}
 			}
 		}
 	}
@@ -302,7 +383,7 @@
 		background: @rsBlack;
 		color: @rsWhite;
 		
-		button {
+		button.control {
 			background: transparent;
 			border: 0px;
 			padding: 0px;
@@ -318,15 +399,120 @@
 				color: @rsBlack;
 				cursor: pointer;
 			}
+			
+			&.action {
+				line-height: 30px;
+				height: 30px;
+				width: 30px;
+			}
 		}
 		
 		.search {
 			white-space: nowrap;
+			
+			.text {
+				border-left: 2px solid black;
+				overflow: hidden;
+			
+				input {
+					/*height: 100%;*/
+					transition: background-color .5s;
+					height: 24px;
+					padding: 3px;
+					border: 0px;
+					
+					&.search-error {
+						background-color: @rsLightRed;
+					}
+				}
+			}
 		}
 		
 		&.open {
 			max-height: 500px;
 			width: 200px;
+		}
+	}
+
+	.legend {
+		position: absolute;
+		bottom: 5px;
+		right: 5px;
+		display: flex;
+		flex-direction: column;
+		width: 40px;
+		min-height: 40px;
+		max-height: 40px;
+		transition: width .5s, max-height .5s;
+		overflow: hidden;
+		z-index: 50;
+		
+		border: 1px solid @rsWhite;
+		border-radius: 5px;
+		background: @rsBlack;
+		color: @rsWhite;
+		
+		.legend-list {
+			max-height: 300px;
+			overflow-x: hidden;
+			overflow-y: auto;
+			
+			button {
+				padding-left: 10px !important;
+				text-align: left;
+			}
+		}
+		
+		.icon {
+			display: inline-block;
+			text-align: center;
+			min-width: 16px; 
+		}
+		
+		button.control {
+			background: transparent;
+			border: 0px;
+			padding: 0px;
+			margin: 0px;
+			line-height: 40px;
+			height: 40px;
+			flex-shrink: 0;
+			color: inherit;
+			
+			&:active,
+			&:hover {
+				background-color: @rsWhite;
+				color: @rsBlack;
+				cursor: pointer;
+			}
+			
+			&.action {
+				line-height: 30px;
+				height: 30px;
+				width: 30px;
+			}
+		}
+		
+		&.open {
+			max-height: 500px;
+			width: 200px;
+		}
+	}
+	
+	.map-paths {
+		position: absolute;
+		touch-action: none;
+		user-select: none;
+		width: 100%;
+		height: 100%;
+		z-index: 10;
+		
+		canvas {
+			position: absolute;
+			touch-action: none;
+			user-select: none;
+			width: 100%;
+			height: 100%;
 		}
 	}
 }

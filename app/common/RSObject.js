@@ -17,7 +17,20 @@ class RSObject extends EventEmitter {
 		this._relatedErrors = {};
 		this._coreData = {};
 		this._registered = {};
+		this._knownKeys = [];
+		this._known = {};
 		this._shadow = JSON.parse(JSON.stringify(details));
+		this._listeningParentCycle = 0;
+		this._listeningParent = () => {
+			var now = Date.now();
+			if(this.universe.initialized && this._listeningParentCycle < now) {
+				this._listeningParentCycle = now + 1000;
+				this.recalculateProperties();
+			}
+			if(rsSystem.debug && this._listeningParentCycle >= now) {
+				console.log("Recycling: ", this);
+			}
+		};
 		
 		this._registered._marked = Date.now();
 		var keys = Object.keys(details),
@@ -50,18 +63,46 @@ class RSObject extends EventEmitter {
 	}
 	
 	get name() {
+		var parent = this._coreData.parent?this.universe.index.index[this._coreData.parent]:false;
+		
 		if(this.hidden) {
-			return this.hiddenName || "Unknown";
+			if(this.hiddenName) {
+				return this.hiddenName;
+			} else if(parent && parent.hiddenName) {
+				return parent.hiddenName;
+			} else {
+				return "Unknown";
+			}
 		} else {
-			return this._coreData.name || this.id;
+			if(this._coreData.name) {
+				return this._coreData.name;
+			} else if(parent && parent.name){
+				return parent.name;
+			} else {
+				return this.id;
+			}
 		}
 	}
 	
 	get description() {
+		var parent = this._coreData.parent?this.universe.index.index[this._coreData.parent]:false;
+		
 		if(this.hidden) {
-			return this.hiddenDescription;
+			if(this.hiddenDescription) {
+				return this.hiddenDescription;
+			} else if(parent && parent.hiddenDescription) {
+				return parent.hiddenDescription;
+			} else {
+				return "Mystery";
+			}
 		} else {
-			return this._coreData.description;
+			if(this._coreData.description) {
+				return this._coreData.description;
+			} else if(parent && parent.description){
+				return parent.description;
+			} else {
+				return "";
+			}
 		}
 	}
 	
@@ -74,6 +115,22 @@ class RSObject extends EventEmitter {
 		change._type = this._type;
 		change.id = this.id;
 		this.universe.send("modify:" + this._type, change);
+	}
+	
+	commitAdditions(change, set) {
+		set = set || {};
+		set._type = this._type;
+		set.id = this.id;
+		set.delta = change;
+		this.universe.send("modify:" + this._type + ":detail:additive", set);
+	}
+	
+	commitSubtractions(change, set) {
+		set = set || {};
+		set._type = this._type;
+		set.id = this.id;
+		set.delta = change;
+		this.universe.send("modify:" + this._type + ":detail:subtractive", set);
 	}
 	
 	/**
@@ -101,12 +158,43 @@ class RSObject extends EventEmitter {
 		}
 		
 		if(updates) {
-			console.log("...");
 			this.commit({
 				"knowledge": this._shadow.knowledge,
 				"learned": this._shadow.learned
 			});
 		}
+	}
+	
+	learnOfObjects(objects) {
+		var x;
+
+		for(x=0; x<objects.length; x++) {
+			if(!this._shadow.learned[objects[x]]) {
+				this._shadow.learned[objects[x]] = Date.now();
+			}
+		}
+		
+		this.commitAdditions({
+			"known_objects": objects
+		},{
+			"learned": this._shadow.learned
+		});
+	}
+	
+	unlearnOfObjects(objects) {
+		var x;
+
+		for(x=0; x<objects.length; x++) {
+			if(!this._shadow.learned[objects[x]]) {
+				this._shadow.learned[objects[x]] = Date.now();
+			}
+		}
+		
+		this.commitSubtractions({
+			"known_objects": objects
+		}, {
+			"learned": this._shadow.learned
+		});
 	}
 	
 	/**
@@ -289,6 +377,9 @@ class RSObject extends EventEmitter {
 		if(!this.id) {
 			return false;
 		}
+		if(this.suppressed) {
+			return false;
+		}
 		
 		if(this.recalculatePrefetch) {
 			this.recalculatePrefetch();
@@ -309,6 +400,7 @@ class RSObject extends EventEmitter {
 			base = {},
 			tracking,
 			loading,
+			parent,
 			buffer,
 			index,
 			hold,
@@ -352,25 +444,37 @@ class RSObject extends EventEmitter {
 //							hold = this.equipped[keys[x]][buffer[y]]; // Things equipped to this slot. Always array.
 							for(z=0; z<hold.length; z++) {
 								// If you have it (Item/Room) or it is inside you (Entity)
-								if(((this[keys[x]] && this[keys[x]].indexOf(hold[z]) !== -1) || (this.universe.indexes[keys[x]] && this.universe.indexes[keys[x]][hold[z]] && this.universe.indexes[keys[x]][hold[z]].inside === this.id))
-										// And you have slots for it
-										&& this.consumeSlotsFor(this.universe.index.lookup[hold[z]], buffer[y], tracking)) {
-									if(debug || this.debug || this.universe.debug) {
-										console.log(" > Record is slot valid: " + hold[z]);
-									}
-									switch(keys[x]) {
-										case "item":
-										case "room":
-											base._overrides[keys[x]].push(hold[z]);
-											break;
+								if((this[keys[x]] && this[keys[x]].indexOf(hold[z]) !== -1) || (this.universe.indexes[keys[x]] && this.universe.indexes[keys[x]][hold[z]] && this.universe.indexes[keys[x]][hold[z]].inside === this.id)) {
+									// And you have slots for it
+									if(this.consumeSlotsFor(this.universe.index.lookup[hold[z]], buffer[y], tracking)) {
+										if(debug || this.debug || this.universe.debug) {
+											console.log(" > Record is slot valid: " + hold[z]);
+										}
+										switch(keys[x]) {
+											case "item":
+											case "room":
+												base._overrides[keys[x]].push(hold[z]);
+												break;
+										}
+									} else {
+										if(debug || this.debug || this.universe.debug) {
+											console.log(" > Record is not slot valid: " + hold[z]);
+										}
+										this._relatedErrors[hold[z]] = {
+											"type": "error",
+											"message": "Not enough slots left",
+											"calculated": Date.now(),
+											"contents": hold[z],
+											"slot": buffer[y]
+										};
 									}
 								} else {
 									if(debug || this.debug || this.universe.debug) {
-										console.log(" > Record is not slot valid: " + hold[z]);
+										console.log(" > Record is not held valid: " + hold[z]);
 									}
 									this._relatedErrors[hold[z]] = {
 										"type": "error",
-										"message": "Not enough slots left",
+										"message": "Item no longer in possession",
 										"calculated": Date.now(),
 										"contents": hold[z],
 										"slot": buffer[y]
@@ -399,11 +503,53 @@ class RSObject extends EventEmitter {
 			}
 		}
 		this._modifiers.splice(0);
+
+		// Establish Base from Core Data Parent if any
+		if(this._coreData.parent && (parent = ((this._coreData._type && this.universe.indexes[this._coreData._type].index[this._coreData.parent]) || (!this._coreData._type && this.universe.index.index[this._coreData.parent])))) {
+			if(this._listeningToParent !== parent) {
+				if(this._listeningToParent) {
+					this._listeningToParent.$off("modified", this._listeningParent);
+				}
+				this._listeningToParent = parent;
+				parent.$on("modified", this._listeningParent);
+			}
+			keys = Object.keys(parent);
+			for(x=0; x<keys.length; x++) {
+				if(keys[x][0] !== "_" && keys[x] !== "template" && keys[x] !== "universe" && !parent._statContributions[keys[x]]) {
+					if(debug) {
+						console.log("Checking Parent Base Key: " + keys[x], this.universe);
+					}
+//					base[keys[x]] = this._coreData[keys[x]];
+					if(typeof(parent[keys[x]]) === "object") {
+						if(parent[keys[x]] === null) {
+							base[keys[x]] = null;
+						} else if(parent[keys[x]] instanceof Array) {
+							base[keys[x]] = [];
+							base[keys[x]].push.apply(base[keys[x]], parent[keys[x]]);
+						} else {
+							base[keys[x]] = Object.assign({}, parent[keys[x]]);
+						}
+					} else {
+						base[keys[x]] = parent[keys[x]];
+					}
+
+					if(!this.universe.nouns) {
+						// console.trace("Noun Failure: ", this);
+					}
+					// Isolate Reference Fields
+					if(this.universe.nouns && this.universe.nouns[keys[x]]) {
+						references.push(keys[x]);
+					}
+				}
+			}
+		} else if(this._listeningToParent) {
+			this._listeningToParent.$off("modified", this._listeningParent);
+		}
 		
-		// Establish Base from Core Data\
+		// Establish Base from Core Data
 		keys = Object.keys(this._coreData);
 		for(x=0; x<keys.length; x++) {
-			if(keys[x][0] !== "_" && keys[x] !== "universe") {
+			if(keys[x][0] !== "_" && keys[x] !== "universe" && this._coreData[keys[x]] !== undefined && this._coreData[keys[x]] !== null) {
 				if(debug) {
 					console.log("Checking Base Key: " + keys[x], this.universe);
 				}
@@ -425,10 +571,14 @@ class RSObject extends EventEmitter {
 					// console.trace("Noun Failure: ", this);
 				}
 				// Isolate Reference Fields
-				if(this.universe.nouns && this.universe.nouns[keys[x]]) {
+				if(this.universe.nouns && this.universe.nouns[keys[x]]) { // Prevent double reference from parent
 					references.push(keys[x]);
 				}
 			}
+		}
+		
+		if(base.name && !base.label) {
+			base.label = base.name;
 		}
 
 		if(debug || this.debug || this.universe.debug) {
@@ -450,12 +600,18 @@ class RSObject extends EventEmitter {
 		// TODO: Listen for changes on references
 		
 		// Reform Search String
-		this._search = this.id.toLowerCase();
+		this._search = ""; //this.id.toLowerCase();
 		if(this.name) {
 			this._search += this.name.toLowerCase();
 		}
 		if(this.description) {
 			this._search += this.description.toLowerCase();
+		}
+		if(this.type && this.type.toLowerCase) {
+			this._search += this.type.toLowerCase();
+		}
+		if(this.classification && this.classification.toLowerCase) {
+			this._search += this.classification.toLowerCase();
 		}
 		if(this.location && typeof(this.location) === "string") {
 			this._search += this.location.toLowerCase();
@@ -497,6 +653,8 @@ class RSObject extends EventEmitter {
 		if(debug || this.debug || this.universe.debug) {
 			console.log("Assembled: ", _p(this), _p(base));
 		}
+		
+		this.rebuildKnown();
 		
 		if(this.recalculateHook) {
 			this.recalculateHook();
@@ -599,6 +757,7 @@ class RSObject extends EventEmitter {
 			}
 		}
 		
+		/*
 		if(this.universe.index) {
 			for(x=0; x<rsSystem.listingNouns.length; x++) {
 				if(this._coreData[rsSystem.listingNouns[x]]) {
@@ -618,6 +777,35 @@ class RSObject extends EventEmitter {
 						}
 					} else if(this._coreData[rsSystem.listingNouns[x]]) {
 						buffer = this.universe.index.lookup[this._coreData[rsSystem.listingNouns[x]]._sourced || this._coreData[rsSystem.listingNouns[x]]];
+						if(buffer) {
+							buffer.performModifications(base, this.id);
+						} else {
+							console.warn("Missing Reference[" + this._coreData[rsSystem.listingNouns[x]] + "] in object[" + this.id + "]");
+						}
+					}
+				}
+			}
+		}
+		*/
+		if(this.universe.index) {
+			for(x=0; x<rsSystem.listingNouns.length; x++) {
+				if(this[rsSystem.listingNouns[x]]) {
+					if(this.debug || this.universe.debug) {
+						console.warn(" ! Perform Cross Check[" + rsSystem.listingNouns[x] + "]: " + this.id);
+					}
+					if(this[rsSystem.listingNouns[x]] instanceof Array) {
+						for(y=0; y<this[rsSystem.listingNouns[x]].length; y++) {
+							if(this[rsSystem.listingNouns[x]][y]) {
+								buffer = this.universe.index.lookup[this[rsSystem.listingNouns[x]][y]._sourced || this[rsSystem.listingNouns[x]][y]];
+								if(buffer) {
+									buffer.performModifications(base, this.id);
+								} else {
+									console.warn("Missing Reference[" + this[rsSystem.listingNouns[x]] + "] in object[" + this.id + "]");
+								}
+							}
+						}
+					} else if(this[rsSystem.listingNouns[x]]) {
+						buffer = this.universe.index.lookup[this[rsSystem.listingNouns[x]]._sourced || this[rsSystem.listingNouns[x]]];
 						if(buffer) {
 							buffer.performModifications(base, this.id);
 						} else {
@@ -668,6 +856,70 @@ class RSObject extends EventEmitter {
 		this.recalculateProperties();
 		// Array properties not recalculating with one pass?
 		this.recalculateProperties();
+	}
+	
+	/**
+	 * Rebuilds the _known property to track what things in the universe
+	 * this object is aware of. This can be used as clarivoyance for what
+	 * has touched or used an inanimate object to a creature's actual knowledge
+	 * that it can share.
+	 * @method rebuildKnown
+	 */
+	rebuildKnown() {
+		var knowledge,
+			key,
+			x,
+			y;
+		
+		for(x=0; x<this._knownKeys.length; x++) {
+			delete(this._known[this._knownKeys[x]]);
+		}
+		this._knownKeys.splice(0);
+
+		if(this.known_objects) {
+			for(x=0; x<this.known_objects.length; x++) {
+				if(!this._known[this.known_objects[x]]) {
+					this._known[this.known_objects[x]] = [];
+				}
+				this._known[this.known_objects[x]].push(this.id);
+				this._knownKeys.push(this.known_objects[x]);
+			}
+		}
+		
+		if(this.knowledge && this.knowledge.length) {
+			for(x=0; x<this.knowledge.length; x++) {
+				knowledge = this.universe.indexes.knowledge.index[this.knowledge[x]];
+				if(knowledge && knowledge.related && knowledge.related.length) {
+					for(y=0; y<knowledge.related.length; y++) {
+						key = knowledge.related[y];
+						if(!this._known[key]) {
+							this._known[key] = [];
+						}
+						this._known[key].push(knowledge.id);
+						this._knownKeys.push(key);
+					}
+				}
+			}
+		}
+	}
+	
+	knowsOf(thing, threshold, knowledge) {
+		if(knowledge && (!this.knowledge || this.knowledge.indexOf(knowledge.id || knowledge) === -1)) {
+			return false;
+		}
+		
+		if(thing) {
+			if(typeof(thing) === "object") {
+				return this._known[thing.id] && this._known[thing.id].length >= (thing.known_threshold || threshold || 1);
+			} else {
+				thing = thing.id || thing;
+				if(!threshold) {
+					threshold = 1;
+				}
+				return this._known[thing] && this._known[thing].length >= threshold;
+			}
+		}
+		return false;
 	}
 }
 

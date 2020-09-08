@@ -1,7 +1,16 @@
 
 (function() {
 	
-	var dataSource;
+	var dataSource,
+		entity;
+	
+	entity = {
+		"label": "Entity",
+		"property": "entity",
+		"type": "select",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
 	
 	dataSource = [{
 		"label": "ID",
@@ -16,14 +25,20 @@
 		"property": "name",
 		"type": "text"
 	}, {
+		"label": "Passcode",
+		"property": "passcode",
+		"type": "text"
+	}, {
 		"label": "E-Mail",
 		"property": "email",
 		"type": "text"
 	}, {
-		"label": "Entity",
-		"property": "entity",
+		"label": "Discord",
+		"property": "linked_discord",
 		"type": "text"
-	}, {
+	},
+	entity,
+	{
 		"label": "Master",
 		"property": "master",
 		"type": "checkbox"
@@ -53,6 +68,8 @@
 			return data;
 		},
 		"mounted": function() {
+			entity.options = this.universe.indexes.entity.listing;
+			entity.options.sortBy("name");
 		},
 		"methods": {
 			"update": function() {

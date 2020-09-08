@@ -76,16 +76,69 @@
 			rsSystem.register(this);
 			
 			if(this.entity) {
+				this.entity.$on("roll-expression", this.roll);
+				this.entity.$on("roll-skill", this.rollSkill);
 				this.entity.$on("modified", this.update);
 				Vue.set(this, "bound", true);
 				this.update();
 			}
 		},
 		"methods": {
-			"roll": function(expression) {
+			"rollSkill": function(skill) {
+				console.log("Rolling Skill: ", this.entity, skill);
+				if(this.state.entityRollListener) {
+					this.roll(this.getSkillDiceExpression(skill), skill.name);
+				}
+			},
+			"roll": function(expression, name) {
+				console.log("Roll: " + expression);
 				var rolled = Dice.calculateDiceRoll(expression || this.state.expression, this.entity);
 				rolled._expression = expression;
+				rolled._label = name;
 				this.state.history.unshift(rolled);
+			},
+			"addExpression": function(expression) {
+				var current = this.state.history[0],
+					roll,
+					keys,
+					x;
+				
+				if(!current) {
+					current = {};
+					current._expression = "";
+					this.state.history.unshift(current);
+				}
+				
+				roll = Dice.calculateDiceRoll(expression);
+				keys = Object.keys(roll);
+				if(current._label) {
+					if(current._suffix) {
+						Vue.set(current, "_suffix", Dice.reduceDiceRoll(current._suffix + " + " + expression));
+					} else {
+						Vue.set(current, "_suffix", expression);
+					}
+				}
+				Vue.set(current, "_expression", Dice.reduceDiceRoll(current._expression + " + " + expression));
+				for(x=0; x<keys.length; x++) {
+					Vue.set(current, keys[x], (current[keys[x]] || 0) + roll[keys[x]]);
+				}
+			},
+			"getSkillDiceExpression": function(skill) {
+				var roll = {},
+					s,
+					x;
+				
+				s = this.entity[skill.propertyKey] || 0;
+				roll.b = this.entity[skill.bonusKey] || 0;
+				if(this.entity[skill.base] < s) {
+					roll.a = s - this.entity[skill.base];
+					roll.p = this.entity[skill.base];
+				} else {
+					roll.a = this.entity[skill.base] - s;
+					roll.p = s;
+				}
+
+				return roll.a + "a + " + roll.b + "b + " + roll.p + "p";
 			},
 			"dismiss": function(index) {
 				this.state.history.splice(index, 1);
@@ -113,6 +166,8 @@
 		"beforeDestroy": function() {
 			if(this.bound) {
 				this.entity.$off("model:modified", this.update);
+				this.entity.$off("roll-skill", this.rollSkill);
+				this.entity.$off("roll-expression", this.roll);
 			}
 		},
 		"template": Vue.templified("components/rssw/dice.html")

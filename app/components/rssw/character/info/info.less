@@ -1,5 +1,24 @@
 .rs-component.rssw.component-character-info {
 
+	.ability-display {
+		position: absolute;
+		background-color: black;
+		overflow: hidden;
+		height: 0px;
+		width: 0px;
+		left: 0px;
+		top: 0px;
+		
+		/*transition: height .5s, width .5s;*/
+		z-index: 50;
+	
+		&.display-open {
+			height: 100%;
+			width: 100%;
+			
+		}
+	}
+
 	a {
 		cursor: pointer;
 	}

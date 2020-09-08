@@ -2,7 +2,16 @@
 (function() {
 	
 	var dataSource,
+		streams,
 		bases;
+	
+	streams = {
+		"label": "Streams",
+		"property": "streams",
+		"type": "multireference",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
 	
 	dataSource = [{
 		"label": "ID",
@@ -22,6 +31,10 @@
 		"property": "general",
 		"type": "checkbox"
 	}, {
+		"label": "Combat",
+		"property": "combat",
+		"type": "checkbox"
+	}, {
 		"label": "Hidden",
 		"property": "hidden",
 		"type": "checkbox"
@@ -29,11 +42,9 @@
 		"label": "Obscured",
 		"property": "obscured",
 		"type": "checkbox"
-	}, {
-		"label": "Stream URIs",
-		"property": "stream_uris",
-		"type": "textarea"
-	}, {
+	},
+	streams,
+	{
 		"label": "Description",
 		"property": "description",
 		"type": "textarea"
@@ -59,6 +70,7 @@
 			return data;
 		},
 		"mounted": function() {
+			streams.source_index = this.universe.indexes.streamurl;
 		},
 		"methods": {
 			"update": function() {

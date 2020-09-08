@@ -9,10 +9,13 @@
 		abilities,
 		location,
 		profiles,
+		datasets,
 		widgets,
+		effects,
 		entity,
 		images,
 		owners,
+		parent,
 		attrs,
 		items,
 		notes,
@@ -22,6 +25,19 @@
 		slots,
 		stats,
 		sexes;
+	
+	datasets = {
+		"label": "Name Dataset",
+		"property": "randomize_name_dataset",
+		"type": "select",
+		"optionValue": "id",
+		"optionLabel": "name",
+		"condition": {
+			"randomize_name": {
+				"operation": "exists"
+			}
+		}
+	};
 	
 	location = {
 		"label": "Location",
@@ -34,6 +50,14 @@
 	entity = {
 		"label": "Inside",
 		"property": "inside", // Not "entity" as modifier inheritence is not wanted
+		"type": "select",
+		"optionValue": "id",
+		"optionLabel": "name"
+	};
+	
+	parent = {
+		"label": "Parent",
+		"property": "parent", // Not "entity" as modifier inheritence is not wanted
 		"type": "select",
 		"optionValue": "id",
 		"optionLabel": "name"
@@ -100,6 +124,14 @@
 		"condition": {
 			"classification": "character"
 		}
+	};
+	
+	effects = {
+		"label": "Effects",
+		"property": "effect",
+		"type": "multireference",
+		"optionValue": "id",
+		"optionLabel": "name"
 	};
 	
 	widgets = {
@@ -211,13 +243,15 @@
 		"label": "ID",
 		"property": "id",
 		"type": "text"
-	}, {
-		"label": "Parent",
-		"property": "parent",
-		"type": "text"
-	}, {
+	},
+	parent,
+	{
 		"label": "Name",
 		"property": "name",
+		"type": "text"
+	}, {
+		"label": "Label",
+		"property": "label",
 		"type": "text"
 	}, {
 		"label": "Icon",
@@ -248,6 +282,10 @@
 	}, {
 		"label": "Credits",
 		"property": "credits",
+		"type": "number"
+	}, {
+		"label": "Cost",
+		"property": "cost",
 		"type": "number"
 	}, {
 		"label": "Silhouette",
@@ -308,6 +346,16 @@
 			"classification": "character"
 		}
 	}, {
+		"label": "Model",
+		"property": "model",
+		"type": "text",
+		"condition": {
+			"classification": {
+				"operation": "contains",
+				"oneof": ["station", "ship", "building", "base"]
+			}
+		}
+	}, {
 		"label": "Required Crew",
 		"property": "required_crew",
 		"type": "number",
@@ -337,6 +385,24 @@
 		"property": "template",
 		"type": "checkbox"
 	}, {
+		"label": "Name Prefix",
+		"property": "randomize_name_prefix",
+		"type": "text",
+		"raw": true,
+		"condition": {
+			"template": true
+		}
+	}, {
+		"label": "Name Suffix",
+		"property": "randomize_name_suffix",
+		"type": "text",
+		"raw": true,
+		"condition": {
+			"template": true
+		}
+	},
+	datasets,
+	{
 		"label": "Random Name",
 		"property": "randomize_name",
 		"type": "select",
@@ -345,6 +411,14 @@
 			"template": true
 		},
 		"options": [0,1,2,3,4,5,6]
+	}, {
+		"label": "Name Spacing",
+		"property": "randomize_name_spacing",
+		"type": "checkbox"
+	}, {
+		"label": "No Map Border",
+		"property": "no_border",
+		"type": "checkbox"
 	}, {
 		"label": "Hidden",
 		"property": "hidden",
@@ -440,6 +514,7 @@
 	},
 	attrs,
 	stats,
+	effects,
 	knowledges,
 	archetypes,
 	abilities,
@@ -486,12 +561,15 @@
 		"mounted": function() {
 			location.options = this.universe.indexes.location.listing;
 			location.options.sortBy("name");
+			datasets.options = this.universe.indexes.dataset.listing;
+			datasets.options.sortBy("name");
 			profiles.options = this.universe.indexes.image.listing;
 			profiles.options.sortBy("name");
+			entity.options = this.universe.indexes.entity.listing;
+			parent.options = entity.options;
+			entity.options.sortBy("name");
 			images.options = this.universe.indexes.image.listing;
 			images.options.sortBy("name");
-			entity.options = this.universe.indexes.entity.listing;
-			entity.options.sortBy("name");
 			pilot.options = this.universe.indexes.entity.listing;
 			pilot.options.sortBy("name");
 			races.options = this.universe.indexes.race.listing;
@@ -506,6 +584,7 @@
 			stats.source_index = this.universe.indexes.modifierstats;
 			itemtypes.source_index = this.universe.indexes.itemtype;
 			abilities.source_index = this.universe.indexes.ability;
+			effects.source_index = this.universe.indexes.effect;
 			widgets.source_index = this.universe.indexes.widget;
 			owners.source_index = this.universe.indexes.player;
 			notes.source_index = this.universe.indexes.note;

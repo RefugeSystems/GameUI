@@ -10,4 +10,10 @@
 	
 	
 	rsSystem.EventBus = new EventEmitter();
+	
+	document.body.onkeydown =  function(event) {
+		if(event && event.key) {
+			rsSystem.EventBus.$emit("key:" + event.key.toLowerCase(), event);
+		}
+	};
 })();

@@ -8,22 +8,31 @@
  */
 (function() {
 	
-	var invisibleKeys = {};
+	var invisibleKeys = {},
+		referenceKeys = {};
 
 	invisibleKeys.property = true;
 	invisibleKeys.enhancementKey= true;
 	invisibleKeys.propertyKey = true;
 	invisibleKeys.bonusKey= true;
+
+	invisibleKeys.randomize_name_spacing = true;
+	invisibleKeys.randomize_name_dataset = true;
+	invisibleKeys.randomize_name_prefix = true;
+	invisibleKeys.randomize_name_suffix = true;
+	invisibleKeys.randomize_name = true;
 	
 	invisibleKeys.information_renderer = true;
 	invisibleKeys.invisibleProperties = true;
 	invisibleKeys.locked_attunement = true;
 	invisibleKeys.source_template = true;
-	invisibleKeys.randomize_name = true;
+	invisibleKeys.path_exception = true;
+	invisibleKeys.known_objects = true;
 	invisibleKeys.modifierstats = true;
-	invisibleKeys.modifierattrs = true; 
+	invisibleKeys.modifierattrs = true;
 	invisibleKeys.no_modifiers = true;
 	invisibleKeys.restock_base = true;
+	invisibleKeys.render_name = true;
 	invisibleKeys.restock_max = true;
 	invisibleKeys.declaration = true;
 	invisibleKeys.description = true;
@@ -34,7 +43,10 @@
 	invisibleKeys.cancontain = true;
 	invisibleKeys.properties = true;
 //	invisibleKeys.indicators = true;
+	invisibleKeys.suppressed = true;
+	invisibleKeys.no_border = true;
 	invisibleKeys.condition = true;
+	invisibleKeys.exception = true;
 	invisibleKeys.singleton = true;
 	invisibleKeys.equipped = true;
 	invisibleKeys.obscured = true;
@@ -48,11 +60,13 @@
 	invisibleKeys.updated = true;
 	invisibleKeys.widgets = true;
 	invisibleKeys.is_shop = true;
+	invisibleKeys.no_rank = true;
 	invisibleKeys.alters = true;
 	invisibleKeys.linked = true;
 	invisibleKeys.owners = true;
 	invisibleKeys.parent = true;
 	invisibleKeys.hidden = true;
+	invisibleKeys.screen = true;
 	invisibleKeys.class = true;
 	invisibleKeys.order = true;
 	invisibleKeys.name = true;
@@ -64,8 +78,31 @@
 	invisibleKeys.id = true;
 	invisibleKeys.x = true;
 	invisibleKeys.y = true;
-	
 
+	invisibleKeys.label_shadow_color = true;
+	invisibleKeys.label_shadow_blur = true;
+	invisibleKeys.label_shadow = true;
+	invisibleKeys.label_shadow = true;
+	invisibleKeys.label_thickness = true;
+	invisibleKeys.fill_thickness = true;
+	invisibleKeys.label_opacity = true;
+	invisibleKeys.fill_opacity = true;
+	invisibleKeys.label_color = true;
+	invisibleKeys.fill_color = true;
+	invisibleKeys.thickness = true;
+	invisibleKeys.clickable = true;
+	invisibleKeys.show_name = true;
+	invisibleKeys.contained = true;
+	invisibleKeys.must_know = true;
+	invisibleKeys.has_path = true;
+	invisibleKeys.pathing = true;
+	invisibleKeys.opacity = true;
+	invisibleKeys.values = true;
+	invisibleKeys.curved = true;
+	invisibleKeys.pathed = true;
+	invisibleKeys.color = true;
+	invisibleKeys.path = true;
+	
 	invisibleKeys.coordinates = true;
 	invisibleKeys.shown_at = true;
 	invisibleKeys.profile = true;
@@ -73,12 +110,20 @@
 	invisibleKeys.viewed = true;
 	invisibleKeys.map = true;
 	
+	referenceKeys.requires_ability = "ability";
+	referenceKeys.requires_knowledge = "knowledge";
+	referenceKeys.archetypes = "archetype";
+	referenceKeys.slot_usage = "slot";
+	
 	var prettifyValues = {};
 	var prettifyNames = {};
 	var knowledgeLink = {};
 	var displayRaw = {};
-	
+
+	prettifyNames.slot_usages = "Slots Used";
+	prettifyNames.dependency = "Dependencies";
 	prettifyNames.itemtype = "Item Types";
+	prettifyNames.xp_cost = "XP";
 	prettifyNames.entity = function(value, record) {
 		if(record._type === "entity") {
 			return "Pilot";
@@ -111,6 +156,11 @@
 		return value;
 	};
 	
+	prettifyValues.date = function(property, value) {
+		value = new Date(value);
+		return value.toDateString();
+	};
+	
 	prettifyValues.related = function(property, value, record, universe) {
 		return "to " + (value?value.length:0) + " records";
 	};
@@ -131,9 +181,31 @@
 		return value;
 	};
 	
+	prettifyValues.activation = function(property, value, record, universe) {
+		if(value) {
+			return value.capitalize();
+		}
+		return "None";
+	};
+	
+	prettifyValues.archetypes = function(property, value, record, universe) {
+		
+	};
+	
+	prettifyValues.dependency = function(property, value, record, universe) {
+		
+	};
+	
 	prettifyValues.piloting = function(property, value, record, universe) {
-		if(universe.indexes.entity[value]) {
-			return universe.indexes.entity[value].name;
+		if(universe.indexes.entity.index[value]) {
+			return universe.indexes.entity.index[value].name;
+		}
+		return value;
+	};
+	
+	prettifyValues.editor = function(property, value, record, universe) {
+		if(universe.indexes.entity.index[value]) {
+			return universe.indexes.entity.index[value].name;
 		}
 		return value;
 	};
@@ -230,6 +302,8 @@
 		"data": function() {
 			var data = {};
 			
+			data.referenceKeys = referenceKeys;
+			
 			data.collapsed = true;
 			data.relatedError = null;
 			data.calculatedEncumberance = 0;
@@ -306,18 +380,25 @@
 		},
 		"methods": {
 			"highlight": function() {
-				var el = $(this.$el).find(".displayed-id");
+				var el = $(this.$el).find(".displayed-id"),
+					text;
 				if(el[0]) {
 					el[0].select();
 					document.execCommand("copy");
 					el.css({"background-color": "#63b35d"});
 					if (window.getSelection) {
-						this.$emit("copying", window.getSelection().toString());
+						text = window.getSelection().toString();
 						window.getSelection().removeAllRanges();
 					} else if (document.selection) {
-						this.$emit("copying", document.selection.toString());
+						text = document.selection.toString();
 						document.selection.empty();
 					}
+					
+					if(text) {
+						rsSystem.EventBus.$emit("copied-id", text);
+						this.$emit("copying", text);
+					}
+					
 					setTimeout(function() {
 						el.css({"background-color": "transparent"});
 					}, 5000);
@@ -328,6 +409,139 @@
 			},
 			"isArray": function(value) {
 				return value instanceof Array;
+			},
+			"hasLearnDependencies": function() {
+				switch(this.record._type) {
+					case "ability":
+						return (!this.record.requires_ability || !this.record.requires_ability.length || this.hasMapped("ability", this.record.requires_ability, this.record.dependency_type)) &&
+								(!this.record.requires_knowledge || !this.record.requires_knowledge.length || this.hasMapped("knowledge", this.record.requires_knowledge, this.record.dependency_type)) &&
+								(!this.record.archetypes || !this.record.archetypes.length || this.hasMapped("archetype", this.record.archetypes));
+				}
+				
+				return false;
+			},
+			"classByXP": function(cost) {
+				var x;
+				
+				if(this.base && this.base.xp && this.base.xp >= cost) {
+					return "meets-requirements";
+				}
+				
+				if(this.record.archetypes && this.record.archetypes.length) {
+					if(!this.base.archetype) {
+						return "requirements";
+					}
+					for(x=0; x<this.record.archetypes.length; x++) {
+						if(this.base.archetype.indexOf(this.record.archetypes[x]) !== -1) {
+							return "meets-requirements";
+						}
+					}
+				}
+				
+				return "requirements";
+			},
+			"classByRequirements": function() {
+				var buffer,
+					x;
+				
+				if(this.base) {
+					if(this.base.ability) {
+						for(x=0; x<this.base.ability.length; x++) {
+							buffer = this.universe.indexes.ability.index[this.base.ability[x]];
+							if(buffer) {
+								if(buffer.requires_ability && buffer.requires_ability.indexOf(this.record.id) !== -1) {
+									return "requirements";
+								}
+							} else {
+								console.warn("Requirement for Missing Ability[" + this.base.ability[x] + "] in Record[" + this.record.id + "]");
+							}
+						}
+					}
+					if(this.base.knowledge) {
+						for(x=0; x<this.base.knowledge.length; x++) {
+							buffer = this.universe.indexes.knowledge.index[this.base.knowledge[x]];
+							if(buffer) {
+								if(buffer.requires_knowledge && buffer.requires_knowledge.indexOf(this.record.id) !== -1) {
+									return "requirements";
+								}
+							} else {
+								console.warn("Requirement for Missing Knowledge[" + this.base.knowledge[x] + "] in Record[" + this.record.id + "]");
+							}
+						}
+					}
+				}
+				
+				return "meets-requirements";
+			},
+			"canForgetAbility": function() {
+				return !this.record.locked_ability && this.hasLearnedAbility(); // Dependency requirements in classByRequirements
+			},
+			"hasMapped": function(reference, needs, type) {
+				var meets = 0,
+					x;
+				if(reference && needs && this.base && this.base[reference] && this.base[reference].length) {
+					for(x=0; x<this.base[reference].length; x++) {
+						if(needs.indexOf(this.base[reference][x]) !== -1) {
+							if(type === "any" || !type) {
+								return true;
+							} else {
+								meets++;
+							}
+						}
+					}
+				}
+				
+				if(meets === needs.length) {
+					return true;
+				}
+				
+				return false;
+			},
+			"canLearnAbility": function() {
+				return !this.record.locked_ability && this.base && this.player && (this.player.master || this.base.owner === this.player.id || (this.base.owners && this.base.owners.indexOf(this.player.id) !== -1)) &&
+						this.record._type === "ability" && !this.hasLearnedAbility() && this.hasLearnDependencies();
+			},
+			"hasLearnedAbility": function() {
+				return this.record && this.base && this.base.ability && this.base.ability.indexOf(this.record.id) !== -1;
+			},
+			"learnAbility": function() {
+				if(!this.record.locked_ability) {
+					var cost = parseInt(this.record.xp_cost) || 0,
+						abilities,
+						index;
+					
+					if(this.base && this.classByXP(cost) === "meets-requirements") {
+						abilities = this.base.ability || [];
+						index = abilities.indexOf(this.record.id);
+						if(index === -1) {
+							index = parseInt(this.base.xp - cost);
+							this.base.commit({
+								"ability": abilities.concat(this.record.id),
+								"xp": index
+							});
+						}
+					}
+				}
+			},
+			"forgetAbility": function() {
+				if(!this.record.locked_ability) {
+					var cost = parseInt(this.record.xp_cost) || 0,
+						abilities,
+						index;
+					
+					if(this.base && this.classByRequirements() === "meets-requirements") {
+						abilities = this.base.ability || [];
+						index = abilities.indexOf(this.record.id);
+						if(index !== -1) {
+							abilities.splice(index, 1);
+							index = parseInt(this.base.xp + cost);
+							this.base.commit({
+								"ability": abilities,
+								"xp": index
+							});
+						}
+					}
+				}
 			},
 			"canTransfer": function() {
 				var hold,
@@ -432,14 +646,31 @@
 				}
 				Vue.set(this, "attach_target", "");
 			},
+			"setCurrentSession": function() {
+				if(this.universe.indexes.setting.index["setting:current:session"]) {
+					this.universe.indexes.setting.index["setting:current:session"].commit({
+						"value": this.record.id
+					});
+				}
+			},
 			"hideRecord": function() {
 				this.record.commit({
-					"hidden": this.record.hidden?null:true
+					"hidden": this.record.hidden?false:true
 				});
 			},
 			"obscureRecord": function() {
 				this.record.commit({
-					"obscured": this.record.obscured?null:true
+					"obscured": this.record.obscured?false:true
+				});
+			},
+			"knownRecord": function() {
+				this.record.commit({
+					"must_know": this.record.must_know?false:true
+				});
+			},
+			"screenRecord": function() {
+				this.record.commit({
+					"screen": this.record.screen?false:true
 				});
 			},
 			"prettifyKey": function(key) {
@@ -637,6 +868,12 @@
 					}, 1000);
 				}
 			},
+			"showDirectProperties": function() {
+				return !this.record.hide_properties && !this.record.hide_stats;
+			},
+			"showInheritRelations": function() {
+				return !this.record.hide_relations && !this.record.hide_stats;
+			},
 			"update": function() {
 				var buffer,
 					hold,
@@ -696,6 +933,9 @@
 				
 				this.keys.splice(0);
 				this.keys.push.apply(this.keys, Object.keys(this.record));
+				if(this.record.name && this.record.label && this.record.name === this.record.label) {
+					this.keys.splice(this.keys.indexOf("label"), 1);
+				}
 				
 				this.partiesPresent.splice(0);
 				map = {};

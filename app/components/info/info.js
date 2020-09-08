@@ -92,6 +92,7 @@
 			};
 			
 			rsSystem.EventBus.$on("display-info", this.displayRecord);
+			rsSystem.EventBus.$on("key:escape", this.closeInfo);
 			this.universe.$on("universe:modified", this.update);
 		},
 		"methods": {
@@ -105,7 +106,8 @@
 			 * @param {RSObject | Object | String} toView Something to identify the RSObject to view or the object itself.
 			 */
 			"displayRecord": function(toView) {
-				console.log("Info: ", toView);
+//				console.log("Info: ", toView);
+//				console.log("Current: ", this.viewing);
 				
 				if(toView && !(toView instanceof RSObject)) {
 					if(toView.record) {
@@ -129,6 +131,7 @@
 				}
 				
 				if(toView) {
+//					console.log("Viewing: ", toView);
 					if(!this.viewing || toView.id !== this.viewing.id) {
 						if(this.viewing) {
 							if(!this.history.length || (this.viewing.id !== toView.id)) {
@@ -186,6 +189,7 @@
 		},
 		"beforeDestroy": function() {
 			this.universe.$off("universe:modified", this.update);
+			rsSystem.EventBus.$off("key:escape", this.closeInfo);
 		},
 		"template": Vue.templified("components/info.html")
 	});

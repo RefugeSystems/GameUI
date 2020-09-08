@@ -269,7 +269,11 @@ var Dice = (function() {
 			d,
 			x;
 		
-		dice = parseDiceRoll(expression, source, target);
+		if(typeof(expression) === "string") {
+			dice = parseDiceRoll(expression, source, target);
+		} else if(typeof(expression) === "object") {
+			dice = expression;
+		}
 		result.sum = parseInt(calculate(dice.null)) || 0;
 //		console.error(dice);
 //		console.warn(result);
@@ -371,7 +375,7 @@ var Dice = (function() {
 			},
 			"2": {
 				"advantage": 0,
-				"success": 0
+				"success": 1
 			},
 			"3": {
 				"advantage": 2,
@@ -387,7 +391,7 @@ var Dice = (function() {
 			},
 			"6": {
 				"advantage": 0,
-				"success": 2
+				"success": 0
 			}
 		},
 		"proficiency":  {

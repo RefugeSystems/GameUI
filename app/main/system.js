@@ -4,10 +4,13 @@ var _p = function(x) {
 		return undefined;
 	} else if(x === null) {
 		return null;
-	} else {
+	} else if(typeof(x) === "object") {
 		return JSON.parse(JSON.stringify(x));
+	} else {
+		return x;
 	}
 };
+
 
 /**
  * 
@@ -181,6 +184,16 @@ rsSystem.App = new Vue({
 					}]
 				}]
 			}, {
+				"path": "master",
+				"component": rsSystem.components.RSSWMasterPage
+			}, {
+				"path": "party",
+				"component": rsSystem.components.RSSWPartyPage,
+				"children": [{
+					"path": ":oid",
+					"component": rsSystem.components.RSSWPartyPage
+				}]
+			}, {
 				"path": "nouns/:type?/:oid?",
 				"component": rsSystem.components.RSNounControls
 			}, {
@@ -189,6 +202,15 @@ rsSystem.App = new Vue({
 			}, {
 				"path": "about",
 				"component": rsSystem.components.RSAbout
+			}, {
+				"path": "account",
+				"component": rsSystem.components.RSAccount
+			}, {
+				"path": "system",
+				"component": rsSystem.components.RSSystem
+			}, {
+				"path": "test",
+				"component": rsSystem.components.RSTest
 			}]
 		}]);
 	},
@@ -196,7 +218,6 @@ rsSystem.App = new Vue({
 	"props": {
 	},
 	"created": function() {
-		var rssys = this;
 		
 	}
 });

@@ -78,18 +78,17 @@
 		"property": "strain_max",
 		"type": "text"
 	}, {
-		"label": "Range",
-		"property": "range",
-		"type": "text"
-	}, {
 		"label": "Damage",
 		"property": "damage",
+		"type": "text"
+	}, {
+		"label": "Crit. Bonus",
+		"property": "critical_damage_bonus",
 		"type": "text"
 	}, {
 		"label": "Pierce",
 		"property": "pierce_damage",
 		"type": "text"
-			
 	}, {
 		"label": "General Defense",
 		"property": "defense_general",
@@ -159,6 +158,10 @@
 		"property": "mass",
 		"type": "text"
 	}, {
+		"label": "Cumbersome",
+		"property": "cumbersome",
+		"type": "text"
+	}, {
 		"label": "Encumberance",
 		"property": "encumberance",
 		"type": "text"
@@ -182,6 +185,38 @@
 		"label": "Hardpoints",
 		"property": "hardpoints",
 		"type": "text"
+	}, {
+		"label": "Charges and Recharging",
+		"property": "__charges",
+		"type": "label"
+	}, {
+		"label": "Max Charges",
+		"property": "charges_max",
+		"type": "text"
+	}, {
+		"label": "Session Gain",
+		"property": "charges_gain_session",
+		"type": "text"
+	}, {
+		"label": "Session Rate",
+		"property": "charges_rate_session",
+		"type": "text"
+	}, {
+		"label": "Long Gain",
+		"property": "charges_gain_long",
+		"type": "text"
+	}, {
+		"label": "Long Rate",
+		"property": "charges_rate_long",
+		"type": "text"
+	}, {
+		"label": "Short Gain",
+		"property": "charges_gain_short",
+		"type": "text"
+	}, {
+		"label": "Short Rate",
+		"property": "charges_rate_short",
+		"type": "text"
 	}];
 	
 	listSource = [
@@ -203,6 +238,7 @@
 	rsSystem.component("NounFieldsModifierStats", {
 		"inherit": true,
 		"mixins": [
+			rsSystem.components.RSComponentUtility,
 			rsSystem.components.RSSWStats
 		],
 		"props": {
@@ -283,10 +319,24 @@
 				"property": "__skills",
 				"type": "label"
 			});
+			this.universe.indexes.skill.listing.sort(this.sortData);
 			for(x=0; x<this.universe.indexes.skill.listing.length; x++) {
 				data.fields.modifierstats.push({
 					"label": this.universe.indexes.skill.listing[x].name,
 					"property": this.universe.indexes.skill.listing[x].propertyKey,
+					"type": "text"
+				});
+			}
+			
+			data.fields.modifierstats.push({
+				"label": "Skill Boosts",
+				"property": "__skillboosts",
+				"type": "label"
+			});
+			for(x=0; x<this.universe.indexes.skill.listing.length; x++) {
+				data.fields.modifierstats.push({
+					"label": this.universe.indexes.skill.listing[x].name + " (B)",
+					"property": "skill_bonuses_" + this.universe.indexes.skill.listing[x].property,
 					"type": "text"
 				});
 			}
